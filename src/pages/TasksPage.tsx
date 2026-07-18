@@ -8,7 +8,7 @@ import {
 import { db } from '../db/database'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { createId } from '../lib/ids'
-import { formatDisplayDate } from '../lib/cadence'
+import { formatDisplayDate, toDateInputValue } from '../lib/cadence'
 import { EmptyState } from '../components/EmptyState'
 import type { WeekendTodo } from '../db/types'
 
@@ -90,6 +90,17 @@ export function TasksPage() {
       .modify((todo) => {
         delete todo.dueDate
       })
+    setMenuOpenId(null)
+    if (editingDueId === id) {
+      setEditingDueId(null)
+      setEditDue('')
+    }
+  }
+
+  async function setDueToday(id: string) {
+    await db.weekendTodos.update(id, {
+      dueDate: toDateInputValue(new Date().toISOString()),
+    })
     setMenuOpenId(null)
     if (editingDueId === id) {
       setEditingDueId(null)
@@ -287,6 +298,14 @@ export function TasksPage() {
                     </button>
                     {menuOpenId === todo.id ? (
                       <div className="kebab-menu" role="menu">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="kebab-menu-item"
+                          onClick={() => void setDueToday(todo.id)}
+                        >
+                          Due today
+                        </button>
                         <button
                           type="button"
                           role="menuitem"
