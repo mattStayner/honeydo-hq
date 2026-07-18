@@ -7,6 +7,7 @@ export type HaulItem = {
   assetName: string
   spaceName: string
   completedAt: string
+  note?: string
 }
 
 export type HaulWeek = {
@@ -16,8 +17,8 @@ export type HaulWeek = {
   items: HaulItem[]
 }
 
-function formatCompletedAt(iso: string): string {
-  return format(parseISO(iso), 'EEE MMM d · h:mm a')
+export function formatCompletedAt(iso: string): string {
+  return format(parseISO(iso), 'EEE MMM d, yyyy · h:mm a')
 }
 
 export function HaulSheet({ weeks, onClose }: { weeks: HaulWeek[]; onClose: () => void }) {
@@ -59,6 +60,7 @@ export function HaulSheet({ weeks, onClose }: { weeks: HaulWeek[]; onClose: () =
                       {item.assetName} · {item.spaceName}
                     </div>
                     <div className="card-meta">{formatCompletedAt(item.completedAt)}</div>
+                    {item.note ? <div className="card-meta">{item.note}</div> : null}
                   </li>
                 ))}
               </ul>
@@ -87,6 +89,7 @@ export function HaulSheet({ weeks, onClose }: { weeks: HaulWeek[]; onClose: () =
                           {item.assetName} · {item.spaceName}
                         </div>
                         <div className="card-meta">{formatCompletedAt(item.completedAt)}</div>
+                        {item.note ? <div className="card-meta">{item.note}</div> : null}
                       </li>
                     ))}
                   </ul>

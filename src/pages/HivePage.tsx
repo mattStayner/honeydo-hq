@@ -15,7 +15,7 @@ import { formatCadence } from '../lib/cadence'
 import { getWeeklyGoal } from '../lib/settings'
 import { BeeMark } from '../components/BeeMark'
 import { EmptyState } from '../components/EmptyState'
-import { HaulSheet, type HaulWeek } from '../components/HaulSheet'
+import { formatCompletedAt, HaulSheet, type HaulWeek } from '../components/HaulSheet'
 import { HoneyGauge } from '../components/HoneyGauge'
 import { ScheduleNextSheet } from '../components/ScheduleNextSheet'
 
@@ -96,17 +96,18 @@ export function HivePage() {
           label:
             weekKey === currentKey
               ? 'This week'
-              : `${format(weekStart, 'MMM d')} – ${format(weekEnd, 'MMM d')}`,
+              : `${format(weekStart, 'MMM d, yyyy')} – ${format(weekEnd, 'MMM d, yyyy')}`,
           items: [],
         }
         byWeek.set(weekKey, week)
       }
       week.items.push({
         id: completion.id,
-        title: task?.title ?? 'Deleted task',
+        title: task?.title ?? completion.title ?? 'Deleted task',
         assetName: asset?.name ?? 'Asset',
         spaceName: space?.name ?? 'Space',
         completedAt: completion.completedAt,
+        note: completion.note,
       })
     }
 
@@ -128,7 +129,8 @@ export function HivePage() {
       .sort((a, b) => b.weekKey.localeCompare(a.weekKey))
   }, [data])
 
-  const weekCompleted = haulWeeks.find((w) => w.isCurrent)?.items.length ?? 0
+  const doneThisWeek = haulWeeks.find((w) => w.isCurrent)?.items ?? []
+  const weekCompleted = doneThisWeek.length
 
   async function beginComplete(task: MaintenanceTask) {
     setPulseId(task.id)
@@ -136,17 +138,36 @@ export function HivePage() {
     setScheduling(task)
   }
 
-  async function confirmNext(nextDue: string) {
+  async function confirmNext(nextDue: string, note: string) {
     if (!scheduling) return
     const completedAt = new Date().toISOString()
     await db.transaction('rw', db.tasks, db.completions, async () => {
       await db.completions.add({
         id: createId(),
         taskId: scheduling.id,
+        title: scheduling.title,
         completedAt,
         nextDueSet: nextDue,
+        ...(note ? { note } : {}),
       })
       await db.tasks.update(scheduling.id, { nextDue })
+    })
+    setScheduling(null)
+  }
+
+  async function finishOneOff(note: string) {
+    if (!scheduling) return
+    const completedAt = new Date().toISOString()
+    const taskId = scheduling.id
+    await db.transaction('rw', db.tasks, db.completions, async () => {
+      await db.completions.add({
+        id: createId(),
+        taskId,
+        title: scheduling.title,
+        completedAt,
+        ...(note ? { note } : {}),
+      })
+      await db.tasks.delete(taskId)
     })
     setScheduling(null)
   }
@@ -171,51 +192,87 @@ export function HivePage() {
 
       {!data ? (
         <p className="muted">Loading…</p>
-      ) : rows.length === 0 ? (
-        <EmptyState title="Hive is quiet">
-          Add a space and asset, then schedule your first maintenance job.
-        </EmptyState>
       ) : (
-        <div className="card-list">
-          {rows.map((task) => {
-            const due = dueLabel(task.nextDue)
-            return (
-              <article
-                key={task.id}
-                className={`card ${due.kind === 'overdue' ? 'overdue' : due.kind === 'due-soon' ? 'due-soon' : ''}`}
-              >
-                <div className="card-top">
-                  <div>
-                    <div className="card-title">{task.title}</div>
-                    <div className="card-meta">
-                      {task.assetName} · {task.spaceName}
-                    </div>
-                    <div className="card-meta">
-                      {formatCadence(task.cadence)}
-                      {task.materials ? ` · ${task.materials}` : ''}
-                    </div>
-                  </div>
-                  <span className={`badge ${due.kind}`}>{due.text}</span>
-                </div>
-                <div className="btn-row">
-                  <button
-                    type="button"
-                    className={`btn btn-primary${pulseId === task.id ? ' complete-pulse' : ''}`}
-                    onClick={() => void beginComplete(task)}
+        <>
+          {rows.length === 0 ? (
+            <EmptyState title="Hive is quiet">
+              Add a space and asset, then schedule your first maintenance job.
+            </EmptyState>
+          ) : (
+            <div className="card-list">
+              {rows.map((task) => {
+                const due = dueLabel(task.nextDue)
+                return (
+                  <article
+                    key={task.id}
+                    className={`card ${due.kind === 'overdue' ? 'overdue' : due.kind === 'due-soon' ? 'due-soon' : ''}`}
                   >
-                    Complete
-                  </button>
-                </div>
-              </article>
-            )
-          })}
-        </div>
+                    <div className="card-top">
+                      <div>
+                        <div className="card-title">{task.title}</div>
+                        <div className="card-meta">
+                          {task.assetName} · {task.spaceName}
+                        </div>
+                        <div className="card-meta">
+                          {formatCadence(task.cadence)}
+                          {task.materials ? ` · ${task.materials}` : ''}
+                          {!task.cadence ? ` · Due ${task.nextDue}` : ''}
+                        </div>
+                      </div>
+                      <span className={`badge ${due.kind}`}>{due.text}</span>
+                    </div>
+                    <div className="btn-row">
+                      <button
+                        type="button"
+                        className={`btn btn-primary${pulseId === task.id ? ' complete-pulse' : ''}`}
+                        onClick={() => void beginComplete(task)}
+                      >
+                        Complete
+                      </button>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          )}
+
+          {doneThisWeek.length > 0 ? (
+            <section className="hive-done" aria-labelledby="done-this-week">
+              <div className="hive-done-head">
+                <h2 id="done-this-week" className="section-title">
+                  Done this week
+                </h2>
+                <button type="button" className="btn btn-ghost hive-done-link" onClick={() => setHaulOpen(true)}>
+                  Honey bank
+                </button>
+              </div>
+              <div className="card-list">
+                {doneThisWeek.map((item) => (
+                  <article key={item.id} className="card card-done">
+                    <div className="card-top">
+                      <div>
+                        <div className="card-title">{item.title}</div>
+                        <div className="card-meta">
+                          {item.assetName} · {item.spaceName}
+                        </div>
+                        <div className="card-meta">{formatCompletedAt(item.completedAt)}</div>
+                        {item.note ? <div className="card-meta">{item.note}</div> : null}
+                      </div>
+                      <span className="badge done">Done</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+        </>
       )}
 
       {scheduling ? (
         <ScheduleNextSheet
           task={scheduling}
-          onConfirm={(d) => void confirmNext(d)}
+          onConfirm={(d, note) => void confirmNext(d, note)}
+          onFinish={(note) => void finishOneOff(note)}
           onCancel={() => setScheduling(null)}
         />
       ) : null}

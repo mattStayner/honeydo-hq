@@ -4,7 +4,7 @@ import { db } from '../db/database'
 import type { CadenceUnit } from '../db/types'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { createId } from '../lib/ids'
-import { formatCadence, toDateInputValue } from '../lib/cadence'
+import { formatCadence, formatDisplayDate, toDateInputValue } from '../lib/cadence'
 import { EmptyState } from '../components/EmptyState'
 
 export function AssetDetailPage() {
@@ -25,6 +25,7 @@ export function AssetDetailPage() {
   const [specValue, setSpecValue] = useState('')
   const [showTaskForm, setShowTaskForm] = useState(false)
   const [taskTitle, setTaskTitle] = useState('')
+  const [repeats, setRepeats] = useState(false)
   const [every, setEvery] = useState(3)
   const [unit, setUnit] = useState<CadenceUnit>('months')
   const [nextDue, setNextDue] = useState(toDateInputValue(new Date().toISOString()))
@@ -58,13 +59,14 @@ export function AssetDetailPage() {
       id: createId(),
       assetId,
       title,
-      cadence: { every, unit },
+      ...(repeats ? { cadence: { every, unit } } : {}),
       nextDue,
       materials: materials.trim(),
       createdAt: new Date().toISOString(),
     })
     setTaskTitle('')
     setMaterials('')
+    setRepeats(false)
     setShowTaskForm(false)
   }
 
@@ -199,26 +201,7 @@ export function AssetDetailPage() {
             />
           </div>
           <div className="field">
-            <label htmlFor="cadence-every">Every</label>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <input
-                id="cadence-every"
-                type="number"
-                min={1}
-                value={every}
-                onChange={(e) => setEvery(Number(e.target.value))}
-                style={{ width: '5rem' }}
-                required
-              />
-              <select value={unit} onChange={(e) => setUnit(e.target.value as CadenceUnit)}>
-                <option value="days">days</option>
-                <option value="weeks">weeks</option>
-                <option value="months">months</option>
-              </select>
-            </div>
-          </div>
-          <div className="field">
-            <label htmlFor="task-due">Next due</label>
+            <label htmlFor="task-due">{repeats ? 'Next due' : 'Due'}</label>
             <input
               id="task-due"
               type="date"
@@ -227,6 +210,35 @@ export function AssetDetailPage() {
               required
             />
           </div>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={repeats}
+              onChange={(e) => setRepeats(e.target.checked)}
+            />
+            <span>Repeats on a schedule</span>
+          </label>
+          {repeats ? (
+            <div className="field">
+              <label htmlFor="cadence-every">Every</label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  id="cadence-every"
+                  type="number"
+                  min={1}
+                  value={every}
+                  onChange={(e) => setEvery(Number(e.target.value))}
+                  style={{ width: '5rem' }}
+                  required
+                />
+                <select value={unit} onChange={(e) => setUnit(e.target.value as CadenceUnit)}>
+                  <option value="days">days</option>
+                  <option value="weeks">weeks</option>
+                  <option value="months">months</option>
+                </select>
+              </div>
+            </div>
+          ) : null}
           <div className="field">
             <label htmlFor="task-materials">Materials / notes</label>
             <textarea
@@ -252,7 +264,8 @@ export function AssetDetailPage() {
                 <div>
                   <div className="card-title">{task.title}</div>
                   <div className="card-meta">
-                    {formatCadence(task.cadence)} · Next {task.nextDue}
+                    {formatCadence(task.cadence)} ·{' '}
+                    {task.cadence ? 'Next' : 'Due'} {formatDisplayDate(task.nextDue)}
                   </div>
                   {task.materials ? <div className="card-meta">{task.materials}</div> : null}
                 </div>

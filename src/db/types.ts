@@ -24,7 +24,8 @@ export interface MaintenanceTask {
   id: string
   assetId: string
   title: string
-  cadence: Cadence
+  /** Present when the task repeats on a regular schedule; omit for one-offs. */
+  cadence?: Cadence
   nextDue: string
   materials: string
   createdAt: string
@@ -33,8 +34,12 @@ export interface MaintenanceTask {
 export interface CompletionLog {
   id: string
   taskId: string
+  /** Snapshot so the haul still labels one-offs removed after complete. */
+  title?: string
   completedAt: string
-  nextDueSet: string
+  /** Next due chosen after complete; omit when the task was finished for good. */
+  nextDueSet?: string
+  note?: string
 }
 
 export interface WeekendTodo {
@@ -60,7 +65,7 @@ export interface ShoppingItem {
   createdAt: string
 }
 
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 4
 
 export interface BackupPayload {
   schemaVersion: number

@@ -340,6 +340,23 @@ button {
   border-color: var(--amber);
 }
 
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.check-row input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--amber);
+}
+
 .bottom-nav {
   position: fixed;
   left: 0;
@@ -812,6 +829,44 @@ button {
   margin: 1.4rem 0 0.7rem;
   color: var(--amber);
   font-size: 1.25rem;
+}
+
+.hive-done {
+  margin-top: 0.5rem;
+}
+
+.hive-done-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.hive-done-head .section-title {
+  margin-bottom: 0.7rem;
+}
+
+.hive-done-link {
+  flex-shrink: 0;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.82rem;
+}
+
+.card.card-done {
+  opacity: 0.82;
+  background: linear-gradient(160deg, #171410 0%, #14110e 100%);
+}
+
+.card.card-done .card-title {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--text-muted) 70%, transparent);
+  color: var(--text-muted);
+}
+
+.badge.done {
+  color: #c8e6b0;
+  border-color: color-mix(in srgb, var(--success) 45%, var(--border));
+  background: color-mix(in srgb, var(--success) 16%, transparent);
 }
 
 .inline-form {
