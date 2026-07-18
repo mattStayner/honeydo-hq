@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  // GitHub Pages project site: https://<user>.github.io/honeydo-hq/
+  base: process.env.GITHUB_ACTIONS ? '/honeydo-hq/' : '/',
   plugins: [
     react(),
     VitePWA({
@@ -16,7 +18,8 @@ export default defineConfig({
         background_color: '#12100e',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
+        start_url: './',
+        scope: './',
         icons: [
           {
             src: 'icons/bee-192.png',
