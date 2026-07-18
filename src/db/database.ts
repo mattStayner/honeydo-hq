@@ -45,6 +45,9 @@ export class HoneyDoDB extends Dexie {
         all.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
         await Promise.all(all.map((todo, index) => table.update(todo.id, { sortOrder: index })))
       })
+    this.version(3).stores({
+      weekendTodos: 'id, done, createdAt, sortOrder, dueDate',
+    })
   }
 }
 

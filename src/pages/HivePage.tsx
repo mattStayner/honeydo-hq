@@ -8,10 +8,10 @@ import {
   startOfWeek,
 } from 'date-fns'
 import { db } from '../db/database'
-import type { Asset, MaintenanceTask, Space } from '../db/types'
+import type { Asset, MaintenanceTask, Space, WeekendTodo } from '../db/types'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { createId } from '../lib/ids'
-import { formatCadence } from '../lib/cadence'
+import { formatCadence, formatDisplayDate } from '../lib/cadence'
 import { getWeeklyGoal } from '../lib/settings'
 import { BeeMark } from '../components/BeeMark'
 import { EmptyState } from '../components/EmptyState'
@@ -19,10 +19,18 @@ import { formatCompletedAt, HaulSheet, type HaulWeek } from '../components/HaulS
 import { HoneyGauge } from '../components/HoneyGauge'
 import { ScheduleNextSheet } from '../components/ScheduleNextSheet'
 
-type TaskRow = MaintenanceTask & {
+type MaintenanceRow = MaintenanceTask & {
+  kind: 'maintenance'
   assetName: string
   spaceName: string
 }
+
+type TodoRow = WeekendTodo & {
+  kind: 'todo'
+  dueDate: string
+}
+
+type HiveRow = MaintenanceRow | TodoRow
 
 function dueLabel(nextDue: string): { text: string; kind: 'overdue' | 'due-soon' | 'later' } {
   const days = differenceInCalendarDays(parseISO(nextDue), new Date())
@@ -40,34 +48,42 @@ function dueLabel(nextDue: string): { text: string; kind: 'overdue' | 'due-soon'
 
 export function HivePage() {
   const data = useLiveQuery(async () => {
-    const [tasks, assets, spaces, completions] = await Promise.all([
+    const [tasks, assets, spaces, completions, weekendTodos] = await Promise.all([
       db.tasks.toArray(),
       db.assets.toArray(),
       db.spaces.toArray(),
       db.completions.toArray(),
+      db.weekendTodos.toArray(),
     ])
-    return { tasks, assets, spaces, completions }
+    return { tasks, assets, spaces, completions, weekendTodos }
   }, [])
 
   const [scheduling, setScheduling] = useState<MaintenanceTask | null>(null)
   const [pulseId, setPulseId] = useState<string | null>(null)
   const [haulOpen, setHaulOpen] = useState(false)
 
-  const rows = useMemo(() => {
+  const rows = useMemo((): HiveRow[] => {
     if (!data) return []
     const assetMap = new Map<string, Asset>(data.assets.map((a) => [a.id, a]))
     const spaceMap = new Map<string, Space>(data.spaces.map((s) => [s.id, s]))
-    return data.tasks
-      .map((task): TaskRow => {
-        const asset = assetMap.get(task.assetId)
-        const space = asset ? spaceMap.get(asset.spaceId) : undefined
-        return {
-          ...task,
-          assetName: asset?.name ?? 'Asset',
-          spaceName: space?.name ?? 'Space',
-        }
-      })
-      .sort((a, b) => a.nextDue.localeCompare(b.nextDue))
+    const maintenance: HiveRow[] = data.tasks.map((task): MaintenanceRow => {
+      const asset = assetMap.get(task.assetId)
+      const space = asset ? spaceMap.get(asset.spaceId) : undefined
+      return {
+        ...task,
+        kind: 'maintenance',
+        assetName: asset?.name ?? 'Asset',
+        spaceName: space?.name ?? 'Space',
+      }
+    })
+    const todos: HiveRow[] = data.weekendTodos
+      .filter((todo): todo is WeekendTodo & { dueDate: string } => !todo.done && !!todo.dueDate)
+      .map((todo): TodoRow => ({ ...todo, kind: 'todo', dueDate: todo.dueDate }))
+    return [...maintenance, ...todos].sort((a, b) => {
+      const aDue = a.kind === 'maintenance' ? a.nextDue : a.dueDate
+      const bDue = b.kind === 'maintenance' ? b.nextDue : b.dueDate
+      return aDue.localeCompare(bDue)
+    })
   }, [data])
 
   const haulWeeks = useMemo((): HaulWeek[] => {
@@ -138,6 +154,12 @@ export function HivePage() {
     setScheduling(task)
   }
 
+  async function completeTodo(todo: TodoRow) {
+    setPulseId(todo.id)
+    window.setTimeout(() => setPulseId(null), 450)
+    await db.weekendTodos.update(todo.id, { done: true })
+  }
+
   async function confirmNext(nextDue: string, note: string) {
     if (!scheduling) return
     const completedAt = new Date().toISOString()
@@ -196,27 +218,56 @@ export function HivePage() {
         <>
           {rows.length === 0 ? (
             <EmptyState title="Hive is quiet">
-              Add a space and asset, then schedule your first maintenance job.
+              Add a space and asset, then schedule your first maintenance job — or put a due date on a
+              task.
             </EmptyState>
           ) : (
             <div className="card-list">
-              {rows.map((task) => {
-                const due = dueLabel(task.nextDue)
+              {rows.map((row) => {
+                if (row.kind === 'todo') {
+                  const due = dueLabel(row.dueDate)
+                  return (
+                    <article
+                      key={`todo-${row.id}`}
+                      className={`card ${due.kind === 'overdue' ? 'overdue' : due.kind === 'due-soon' ? 'due-soon' : ''}`}
+                    >
+                      <div className="card-top">
+                        <div>
+                          <div className="card-title">{row.title}</div>
+                          <div className="card-meta">Task</div>
+                          <div className="card-meta">Due {formatDisplayDate(row.dueDate)}</div>
+                        </div>
+                        <span className={`badge ${due.kind}`}>{due.text}</span>
+                      </div>
+                      <div className="btn-row">
+                        <button
+                          type="button"
+                          className={`btn btn-primary${pulseId === row.id ? ' complete-pulse' : ''}`}
+                          onClick={() => void completeTodo(row)}
+                        >
+                          Complete
+                        </button>
+                      </div>
+                    </article>
+                  )
+                }
+
+                const due = dueLabel(row.nextDue)
                 return (
                   <article
-                    key={task.id}
+                    key={row.id}
                     className={`card ${due.kind === 'overdue' ? 'overdue' : due.kind === 'due-soon' ? 'due-soon' : ''}`}
                   >
                     <div className="card-top">
                       <div>
-                        <div className="card-title">{task.title}</div>
+                        <div className="card-title">{row.title}</div>
                         <div className="card-meta">
-                          {task.assetName} · {task.spaceName}
+                          {row.assetName} · {row.spaceName}
                         </div>
                         <div className="card-meta">
-                          {formatCadence(task.cadence)}
-                          {task.materials ? ` · ${task.materials}` : ''}
-                          {!task.cadence ? ` · Due ${task.nextDue}` : ''}
+                          {formatCadence(row.cadence)}
+                          {row.materials ? ` · ${row.materials}` : ''}
+                          {!row.cadence ? ` · Due ${formatDisplayDate(row.nextDue)}` : ''}
                         </div>
                       </div>
                       <span className={`badge ${due.kind}`}>{due.text}</span>
@@ -224,8 +275,8 @@ export function HivePage() {
                     <div className="btn-row">
                       <button
                         type="button"
-                        className={`btn btn-primary${pulseId === task.id ? ' complete-pulse' : ''}`}
-                        onClick={() => void beginComplete(task)}
+                        className={`btn btn-primary${pulseId === row.id ? ' complete-pulse' : ''}`}
+                        onClick={() => void beginComplete(row)}
                       >
                         Complete
                       </button>

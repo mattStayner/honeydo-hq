@@ -47,6 +47,8 @@ export interface WeekendTodo {
   title: string
   done: boolean
   sortOrder: number
+  /** When set, the open todo also appears on the Hive by due date. */
+  dueDate?: string
   createdAt: string
 }
 
@@ -65,7 +67,7 @@ export interface ShoppingItem {
   createdAt: string
 }
 
-export const SCHEMA_VERSION = 4
+export const SCHEMA_VERSION = 5
 
 export interface BackupPayload {
   schemaVersion: number

@@ -659,6 +659,16 @@ button {
   gap: 0.45rem;
 }
 
+.todo-due-edit {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.todo-due-edit .field {
+  margin-bottom: 0.65rem;
+}
+
 .drag-handle {
   flex-shrink: 0;
   display: grid;

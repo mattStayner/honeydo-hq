@@ -8,16 +8,20 @@ import {
 import { db } from '../db/database'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { createId } from '../lib/ids'
+import { formatDisplayDate } from '../lib/cadence'
 import { EmptyState } from '../components/EmptyState'
 import type { WeekendTodo } from '../db/types'
 
 export function TasksPage() {
   const todos = useLiveQuery(() => db.weekendTodos.orderBy('sortOrder').toArray(), [])
   const [title, setTitle] = useState('')
+  const [dueDate, setDueDate] = useState('')
   const [filter, setFilter] = useState<'open' | 'done' | 'all'>('open')
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
+  const [editingDueId, setEditingDueId] = useState<string | null>(null)
+  const [editDue, setEditDue] = useState('')
   const dragIdRef = useRef<string | null>(null)
   const overIdRef = useRef<string | null>(null)
 
@@ -50,8 +54,10 @@ export function TasksPage() {
       done: false,
       sortOrder: todos?.length ? minOrder - 1 : 0,
       createdAt: new Date().toISOString(),
+      ...(dueDate ? { dueDate } : {}),
     })
     setTitle('')
+    setDueDate('')
   }
 
   async function toggle(id: string, done: boolean) {
@@ -60,6 +66,35 @@ export function TasksPage() {
 
   async function remove(id: string) {
     await db.weekendTodos.delete(id)
+  }
+
+  async function saveDueDate(id: string) {
+    if (editDue) {
+      await db.weekendTodos.update(id, { dueDate: editDue })
+    } else {
+      await db.weekendTodos
+        .where('id')
+        .equals(id)
+        .modify((todo) => {
+          delete todo.dueDate
+        })
+    }
+    setEditingDueId(null)
+    setEditDue('')
+  }
+
+  async function clearDueDate(id: string) {
+    await db.weekendTodos
+      .where('id')
+      .equals(id)
+      .modify((todo) => {
+        delete todo.dueDate
+      })
+    setMenuOpenId(null)
+    if (editingDueId === id) {
+      setEditingDueId(null)
+      setEditDue('')
+    }
   }
 
   async function clearDone() {
@@ -150,6 +185,15 @@ export function TasksPage() {
             placeholder="Fix loose deck board"
           />
         </div>
+        <div className="field">
+          <label htmlFor="todo-due">Due date (optional)</label>
+          <input
+            id="todo-due"
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+          />
+        </div>
         <button type="submit" className="btn btn-primary">
           Add to list
         </button>
@@ -223,6 +267,9 @@ export function TasksPage() {
                     </span>
                     <div>
                       <div className="card-title">{todo.title}</div>
+                      {todo.dueDate ? (
+                        <div className="card-meta">Due {formatDisplayDate(todo.dueDate)}</div>
+                      ) : null}
                     </div>
                   </button>
                   <div className="todo-menu" data-todo-menu>
@@ -243,6 +290,28 @@ export function TasksPage() {
                         <button
                           type="button"
                           role="menuitem"
+                          className="kebab-menu-item"
+                          onClick={() => {
+                            setMenuOpenId(null)
+                            setEditingDueId(todo.id)
+                            setEditDue(todo.dueDate ?? '')
+                          }}
+                        >
+                          {todo.dueDate ? 'Change due date' : 'Add due date'}
+                        </button>
+                        {todo.dueDate ? (
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="kebab-menu-item"
+                            onClick={() => void clearDueDate(todo.id)}
+                          >
+                            Clear due date
+                          </button>
+                        ) : null}
+                        <button
+                          type="button"
+                          role="menuitem"
                           className="kebab-menu-item danger"
                           onClick={() => {
                             setMenuOpenId(null)
@@ -255,6 +324,41 @@ export function TasksPage() {
                     ) : null}
                   </div>
                 </div>
+                {editingDueId === todo.id ? (
+                  <form
+                    className="todo-due-edit"
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      void saveDueDate(todo.id)
+                    }}
+                  >
+                    <div className="field">
+                      <label htmlFor={`todo-due-${todo.id}`}>Due date</label>
+                      <input
+                        id={`todo-due-${todo.id}`}
+                        type="date"
+                        value={editDue}
+                        onChange={(e) => setEditDue(e.target.value)}
+                        autoFocus
+                      />
+                    </div>
+                    <div className="btn-row">
+                      <button type="submit" className="btn btn-primary btn-sm">
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => {
+                          setEditingDueId(null)
+                          setEditDue('')
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : null}
               </article>
             )
           })}

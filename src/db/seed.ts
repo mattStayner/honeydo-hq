@@ -137,6 +137,7 @@ export async function seedDemoData(): Promise<void> {
       title: 'Tighten loose deck board',
       done: false,
       sortOrder: 0,
+      dueDate: iso(2),
       createdAt: now,
     },
     {
