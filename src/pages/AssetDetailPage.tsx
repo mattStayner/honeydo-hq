@@ -4,8 +4,17 @@ import { db } from '../db/database'
 import type { CadenceUnit } from '../db/types'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { createId } from '../lib/ids'
-import { formatCadence, formatDisplayDate, toDateInputValue } from '../lib/cadence'
+import { formatCadence, formatDisplayDate } from '../lib/cadence'
 import { EmptyState } from '../components/EmptyState'
+import { EditAssetDetailsSheet } from '../components/EditAssetDetailsSheet'
+
+function formatAmount(amount: number): string {
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
 
 export function AssetDetailPage() {
   const { assetId = '' } = useParams()
@@ -16,11 +25,18 @@ export function AssetDetailPage() {
     async () => (asset ? db.spaces.get(asset.spaceId) : undefined),
     [asset?.spaceId],
   )
-  const tasks = useLiveQuery(
-    () => db.tasks.where('assetId').equals(assetId).sortBy('nextDue'),
-    [assetId],
-  )
+  const tasks = useLiveQuery(async () => {
+    const list = await db.tasks.where('assetId').equals(assetId).toArray()
+    return list.sort((a, b) => {
+      if (a.nextDue && b.nextDue) return a.nextDue.localeCompare(b.nextDue)
+      if (a.nextDue) return -1
+      if (b.nextDue) return 1
+      return b.createdAt.localeCompare(a.createdAt)
+    })
+  }, [assetId])
 
+  const [showDetailsEdit, setShowDetailsEdit] = useState(false)
+  const [showSpecForm, setShowSpecForm] = useState(false)
   const [specKey, setSpecKey] = useState('')
   const [specValue, setSpecValue] = useState('')
   const [showTaskForm, setShowTaskForm] = useState(false)
@@ -28,7 +44,7 @@ export function AssetDetailPage() {
   const [repeats, setRepeats] = useState(false)
   const [every, setEvery] = useState(3)
   const [unit, setUnit] = useState<CadenceUnit>('months')
-  const [nextDue, setNextDue] = useState(toDateInputValue(new Date().toISOString()))
+  const [nextDue, setNextDue] = useState('')
   const [materials, setMaterials] = useState('')
 
   async function addSpec(e: FormEvent) {
@@ -42,6 +58,7 @@ export function AssetDetailPage() {
     })
     setSpecKey('')
     setSpecValue('')
+    setShowSpecForm(false)
   }
 
   async function removeSpec(key: string) {
@@ -60,12 +77,13 @@ export function AssetDetailPage() {
       assetId,
       title,
       ...(repeats ? { cadence: { every, unit } } : {}),
-      nextDue,
-      materials: materials.trim(),
+      ...(nextDue ? { nextDue } : {}),
+      ...(materials.trim() ? { materials: materials.trim() } : {}),
       createdAt: new Date().toISOString(),
     })
     setTaskTitle('')
     setMaterials('')
+    setNextDue('')
     setRepeats(false)
     setShowTaskForm(false)
   }
@@ -111,6 +129,8 @@ export function AssetDetailPage() {
     )
   }
 
+  const specEntries = Object.entries(asset.specs)
+
   return (
     <main className="page">
       <header className="page-header">
@@ -121,16 +141,101 @@ export function AssetDetailPage() {
             </Link>
           </p>
           <h1>{asset.name}</h1>
-          <p>Specs and maintenance schedule.</p>
+          <p>Purchase info, specs, and maintenance schedule.</p>
         </div>
       </header>
 
-      <h2 className="section-title">Specs</h2>
-      {Object.keys(asset.specs).length === 0 ? (
+      <div className="page-header" style={{ marginTop: '0.25rem' }}>
+        <h2 className="section-title" style={{ margin: 0 }}>
+          Details
+        </h2>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          onClick={() => setShowDetailsEdit(true)}
+        >
+          Edit
+        </button>
+      </div>
+
+      {asset.purchaseDate || asset.purchaseAmount != null || asset.description ? (
+        <div className="asset-details">
+          {(asset.purchaseDate || asset.purchaseAmount != null) && (
+            <p className="asset-details-meta">
+              {[
+                asset.purchaseDate
+                  ? `Purchased ${formatDisplayDate(asset.purchaseDate)}`
+                  : null,
+                asset.purchaseAmount != null
+                  ? formatAmount(asset.purchaseAmount)
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+          )}
+          {asset.description ? (
+            <p className="asset-details-description">{asset.description}</p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="muted">No purchase details yet.</p>
+      )}
+
+      {showDetailsEdit ? (
+        <EditAssetDetailsSheet
+          asset={asset}
+          onClose={() => setShowDetailsEdit(false)}
+        />
+      ) : null}
+
+      <div className="page-header" style={{ marginTop: '0.5rem' }}>
+        <h2 className="section-title" style={{ margin: 0 }}>
+          Specs
+        </h2>
+        <button
+          type="button"
+          className="btn btn-primary btn-sm"
+          onClick={() => setShowSpecForm((v) => !v)}
+        >
+          {showSpecForm ? 'Close' : 'Add spec'}
+        </button>
+      </div>
+
+      {showSpecForm ? (
+        <form className="inline-form" onSubmit={(e) => void addSpec(e)}>
+          <div className="field">
+            <label htmlFor="spec-key">Label</label>
+            <input
+              id="spec-key"
+              value={specKey}
+              onChange={(e) => setSpecKey(e.target.value)}
+              placeholder="Filter size"
+              autoFocus
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="spec-value">Value</label>
+            <input
+              id="spec-value"
+              value={specValue}
+              onChange={(e) => setSpecValue(e.target.value)}
+              placeholder="16x25x1"
+              required
+            />
+          </div>
+          <button type="submit" className="btn btn-primary btn-sm">
+            Add spec
+          </button>
+        </form>
+      ) : null}
+
+      {specEntries.length === 0 ? (
         <p className="muted">No specs yet — add filter size, oil weight, etc.</p>
       ) : (
         <dl className="specs-grid">
-          {Object.entries(asset.specs).map(([key, value]) => (
+          {specEntries.map(([key, value]) => (
             <div className="spec-row" key={key}>
               <dt>{key}</dt>
               <dd>
@@ -148,32 +253,6 @@ export function AssetDetailPage() {
           ))}
         </dl>
       )}
-
-      <form className="inline-form" onSubmit={(e) => void addSpec(e)}>
-        <div className="field">
-          <label htmlFor="spec-key">Label</label>
-          <input
-            id="spec-key"
-            value={specKey}
-            onChange={(e) => setSpecKey(e.target.value)}
-            placeholder="Filter size"
-            required
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="spec-value">Value</label>
-          <input
-            id="spec-value"
-            value={specValue}
-            onChange={(e) => setSpecValue(e.target.value)}
-            placeholder="16x25x1"
-            required
-          />
-        </div>
-        <button type="submit" className="btn btn-primary btn-sm">
-          Add spec
-        </button>
-      </form>
 
       <div className="page-header" style={{ marginTop: '0.5rem' }}>
         <h2 className="section-title" style={{ margin: 0 }}>
@@ -207,7 +286,6 @@ export function AssetDetailPage() {
               type="date"
               value={nextDue}
               onChange={(e) => setNextDue(e.target.value)}
-              required
             />
           </div>
           <label className="check-row">
@@ -264,8 +342,14 @@ export function AssetDetailPage() {
                 <div>
                   <div className="card-title">{task.title}</div>
                   <div className="card-meta">
-                    {formatCadence(task.cadence)} ·{' '}
-                    {task.cadence ? 'Next' : 'Due'} {formatDisplayDate(task.nextDue)}
+                    {[
+                      task.cadence ? formatCadence(task.cadence) : null,
+                      task.nextDue
+                        ? `${task.cadence ? 'Next' : 'Due'} ${formatDisplayDate(task.nextDue)}`
+                        : 'No date',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </div>
                   {task.materials ? <div className="card-meta">{task.materials}</div> : null}
                 </div>

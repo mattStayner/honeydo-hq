@@ -16,40 +16,36 @@ export interface Asset {
   id: string
   spaceId: string
   name: string
+  /** ISO date (yyyy-mm-dd) when the asset was purchased. */
+  purchaseDate?: string
+  /** Amount paid at purchase. */
+  purchaseAmount?: number
+  /** Warranty, maintenance notes, and other freeform details. */
+  description?: string
   specs: Record<string, string>
   createdAt: string
 }
 
-export interface MaintenanceTask {
+export interface Task {
   id: string
-  assetId: string
   title: string
-  /** Present when the task repeats on a regular schedule; omit for one-offs. */
+  assetId?: string
+  /** Present when the task repeats on a regular schedule. */
   cadence?: Cadence
-  nextDue: string
-  materials: string
+  nextDue?: string
+  materials?: string
   createdAt: string
 }
 
 export interface CompletionLog {
   id: string
   taskId: string
-  /** Snapshot so the haul still labels one-offs removed after complete. */
+  /** Snapshot so the haul still labels tasks removed after complete. */
   title?: string
   completedAt: string
   /** Next due chosen after complete; omit when the task was finished for good. */
   nextDueSet?: string
   note?: string
-}
-
-export interface WeekendTodo {
-  id: string
-  title: string
-  done: boolean
-  sortOrder: number
-  /** When set, the open todo also appears on the Hive by due date. */
-  dueDate?: string
-  createdAt: string
 }
 
 export interface ShoppingList {
@@ -67,16 +63,15 @@ export interface ShoppingItem {
   createdAt: string
 }
 
-export const SCHEMA_VERSION = 5
+export const SCHEMA_VERSION = 7
 
 export interface BackupPayload {
   schemaVersion: number
   exportedAt: string
   spaces: Space[]
   assets: Asset[]
-  tasks: MaintenanceTask[]
+  tasks: Task[]
   completions: CompletionLog[]
-  weekendTodos: WeekendTodo[]
   shoppingLists: ShoppingList[]
   shoppingItems: ShoppingItem[]
 }

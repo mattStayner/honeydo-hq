@@ -25,9 +25,8 @@ npm run preview
 
 ## Features
 
-- **Hive** — upcoming maintenance, complete + schedule next
+- **Hive** — all tasks (optional asset/due date), complete + schedule next
 - **Spaces** — rooms/areas → assets → specs + tasks
-- **Tasks** — capture weekday odd jobs
 - **Shop** — checkable shopping lists (default Home Depot)
 - **Settings** — Honey bank weekly goal, JSON export/import backup, demo data, install tip
 

@@ -2,19 +2,17 @@ import Dexie, { type Table } from 'dexie'
 import type {
   Asset,
   CompletionLog,
-  MaintenanceTask,
   ShoppingItem,
   ShoppingList,
   Space,
-  WeekendTodo,
+  Task,
 } from './types'
 
 export class HoneyDoDB extends Dexie {
   spaces!: Table<Space, string>
   assets!: Table<Asset, string>
-  tasks!: Table<MaintenanceTask, string>
+  tasks!: Table<Task, string>
   completions!: Table<CompletionLog, string>
-  weekendTodos!: Table<WeekendTodo, string>
   shoppingLists!: Table<ShoppingList, string>
   shoppingItems!: Table<ShoppingItem, string>
 
@@ -40,13 +38,23 @@ export class HoneyDoDB extends Dexie {
         shoppingItems: 'id, listId, checked',
       })
       .upgrade(async (tx) => {
-        const table = tx.table<WeekendTodo, string>('weekendTodos')
+        const table = tx.table('weekendTodos')
         const all = await table.toArray()
-        all.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-        await Promise.all(all.map((todo, index) => table.update(todo.id, { sortOrder: index })))
+        all.sort((a, b) =>
+          String(b.createdAt).localeCompare(String(a.createdAt)),
+        )
+        await Promise.all(
+          all.map((todo, index) =>
+            table.update(todo.id as string, { sortOrder: index }),
+          ),
+        )
       })
     this.version(3).stores({
       weekendTodos: 'id, done, createdAt, sortOrder, dueDate',
+    })
+    this.version(4).stores({
+      weekendTodos: null,
+      tasks: 'id, assetId, nextDue, createdAt',
     })
   }
 }

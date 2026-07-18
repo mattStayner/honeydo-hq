@@ -2,23 +2,15 @@ import { db } from './database'
 import { SCHEMA_VERSION, type BackupPayload } from './types'
 
 export async function exportBackup(): Promise<BackupPayload> {
-  const [
-    spaces,
-    assets,
-    tasks,
-    completions,
-    weekendTodos,
-    shoppingLists,
-    shoppingItems,
-  ] = await Promise.all([
-    db.spaces.toArray(),
-    db.assets.toArray(),
-    db.tasks.toArray(),
-    db.completions.toArray(),
-    db.weekendTodos.toArray(),
-    db.shoppingLists.toArray(),
-    db.shoppingItems.toArray(),
-  ])
+  const [spaces, assets, tasks, completions, shoppingLists, shoppingItems] =
+    await Promise.all([
+      db.spaces.toArray(),
+      db.assets.toArray(),
+      db.tasks.toArray(),
+      db.completions.toArray(),
+      db.shoppingLists.toArray(),
+      db.shoppingItems.toArray(),
+    ])
 
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -27,7 +19,6 @@ export async function exportBackup(): Promise<BackupPayload> {
     assets,
     tasks,
     completions,
-    weekendTodos,
     shoppingLists,
     shoppingItems,
   }
@@ -55,7 +46,6 @@ function isBackupPayload(value: unknown): value is BackupPayload {
     Array.isArray(v.assets) &&
     Array.isArray(v.tasks) &&
     Array.isArray(v.completions) &&
-    Array.isArray(v.weekendTodos) &&
     Array.isArray(v.shoppingLists) &&
     Array.isArray(v.shoppingItems)
   )
@@ -86,7 +76,6 @@ export async function importBackup(
       db.assets,
       db.tasks,
       db.completions,
-      db.weekendTodos,
       db.shoppingLists,
       db.shoppingItems,
     ],
@@ -97,28 +86,15 @@ export async function importBackup(
           db.assets.clear(),
           db.tasks.clear(),
           db.completions.clear(),
-          db.weekendTodos.clear(),
           db.shoppingLists.clear(),
           db.shoppingItems.clear(),
         ])
       }
 
-      const weekendTodos = [...payload.weekendTodos]
-        .sort((a, b) => {
-          const ao =
-            typeof a.sortOrder === 'number' ? a.sortOrder : Number.POSITIVE_INFINITY
-          const bo =
-            typeof b.sortOrder === 'number' ? b.sortOrder : Number.POSITIVE_INFINITY
-          if (ao !== bo) return ao - bo
-          return b.createdAt.localeCompare(a.createdAt)
-        })
-        .map((todo, index) => ({ ...todo, sortOrder: index }))
-
       await db.spaces.bulkPut(payload.spaces)
       await db.assets.bulkPut(payload.assets)
       await db.tasks.bulkPut(payload.tasks)
       await db.completions.bulkPut(payload.completions)
-      await db.weekendTodos.bulkPut(weekendTodos)
       await db.shoppingLists.bulkPut(payload.shoppingLists)
       await db.shoppingItems.bulkPut(payload.shoppingItems)
     },

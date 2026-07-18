@@ -34,6 +34,10 @@ export async function seedDemoData(): Promise<void> {
     id: createId(),
     spaceId: utilityRoom.id,
     name: 'Furnace',
+    purchaseDate: '2021-09-15',
+    purchaseAmount: 4200,
+    description:
+      '10-year parts warranty through 2031. Replace filter every 3 months; schedule annual tune-up before winter.',
     specs: { 'Filter size': '16x25x1', Brand: 'Filtrete' },
     createdAt: now,
   }
@@ -96,6 +100,22 @@ export async function seedDemoData(): Promise<void> {
       materials: '5W-30, FL820S filter',
       createdAt: now,
     },
+    {
+      id: createId(),
+      title: 'Tighten loose deck board',
+      nextDue: iso(2),
+      createdAt: now,
+    },
+    {
+      id: createId(),
+      title: 'Clean gutters on south side',
+      createdAt: now,
+    },
+    {
+      id: createId(),
+      title: 'Organize garage shelf',
+      createdAt: now,
+    },
   ]
 
   const shopList = {
@@ -131,31 +151,6 @@ export async function seedDemoData(): Promise<void> {
     },
   ]
 
-  const weekendTodos = [
-    {
-      id: createId(),
-      title: 'Tighten loose deck board',
-      done: false,
-      sortOrder: 0,
-      dueDate: iso(2),
-      createdAt: now,
-    },
-    {
-      id: createId(),
-      title: 'Clean gutters on south side',
-      done: false,
-      sortOrder: 1,
-      createdAt: now,
-    },
-    {
-      id: createId(),
-      title: 'Organize garage shelf',
-      done: false,
-      sortOrder: 2,
-      createdAt: now,
-    },
-  ]
-
   await db.transaction(
     'rw',
     [
@@ -163,7 +158,6 @@ export async function seedDemoData(): Promise<void> {
       db.assets,
       db.tasks,
       db.completions,
-      db.weekendTodos,
       db.shoppingLists,
       db.shoppingItems,
     ],
@@ -173,7 +167,6 @@ export async function seedDemoData(): Promise<void> {
         db.assets.clear(),
         db.tasks.clear(),
         db.completions.clear(),
-        db.weekendTodos.clear(),
         db.shoppingLists.clear(),
         db.shoppingItems.clear(),
       ])
@@ -182,7 +175,6 @@ export async function seedDemoData(): Promise<void> {
       await db.tasks.bulkAdd(tasks)
       await db.shoppingLists.add(shopList)
       await db.shoppingItems.bulkAdd(shopItems)
-      await db.weekendTodos.bulkAdd(weekendTodos)
     },
   )
 }

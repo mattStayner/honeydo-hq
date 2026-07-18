@@ -3,11 +3,6 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/database'
 
 export function BottomNav() {
-  const weekendOpen = useLiveQuery(
-    () => db.weekendTodos.filter((t) => !t.done).count(),
-    [],
-    0,
-  )
   const shopOpen = useLiveQuery(
     () => db.shoppingItems.filter((i) => !i.checked).count(),
     [],
@@ -28,14 +23,6 @@ export function BottomNav() {
           <SpacesIcon />
           Spaces
         </NavLink>
-        <NavLink
-          to="/tasks"
-          className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-        >
-          <TasksIcon />
-          Tasks
-          {(weekendOpen ?? 0) > 0 ? <span className="nav-badge">{weekendOpen}</span> : null}
-        </NavLink>
         <NavLink to="/shop" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
           <ShopIcon />
           Shop
@@ -55,9 +42,8 @@ export function BottomNav() {
 
 function HiveIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" />
-      <path d="M12 12l8-4.5M12 12v9M12 12L4 7.5" />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+      <path d="M12 2.5l7.8 4.5v9L12 20.5l-7.8-4.5v-9L12 2.5z" />
     </svg>
   )
 }
@@ -67,14 +53,6 @@ function SpacesIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M4 10l8-6 8 6v10H4V10z" />
       <path d="M10 20v-6h4v6" />
-    </svg>
-  )
-}
-
-function TasksIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

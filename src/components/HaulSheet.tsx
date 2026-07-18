@@ -56,9 +56,11 @@ export function HaulSheet({ weeks, onClose }: { weeks: HaulWeek[]; onClose: () =
                 {current!.items.map((item) => (
                   <li key={item.id}>
                     <div className="card-title">{item.title}</div>
-                    <div className="card-meta">
-                      {item.assetName} · {item.spaceName}
-                    </div>
+                    {item.assetName || item.spaceName ? (
+                      <div className="card-meta">
+                        {[item.assetName, item.spaceName].filter(Boolean).join(' · ')}
+                      </div>
+                    ) : null}
                     <div className="card-meta">{formatCompletedAt(item.completedAt)}</div>
                     {item.note ? <div className="card-meta">{item.note}</div> : null}
                   </li>
@@ -85,9 +87,11 @@ export function HaulSheet({ weeks, onClose }: { weeks: HaulWeek[]; onClose: () =
                     {week.items.map((item) => (
                       <li key={item.id}>
                         <div className="card-title">{item.title}</div>
-                        <div className="card-meta">
-                          {item.assetName} · {item.spaceName}
-                        </div>
+                        {item.assetName || item.spaceName ? (
+                          <div className="card-meta">
+                            {[item.assetName, item.spaceName].filter(Boolean).join(' · ')}
+                          </div>
+                        ) : null}
                         <div className="card-meta">{formatCompletedAt(item.completedAt)}</div>
                         {item.note ? <div className="card-meta">{item.note}</div> : null}
                       </li>

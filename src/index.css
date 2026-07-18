@@ -376,7 +376,7 @@ button {
   width: 100%;
   max-width: 560px;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   height: var(--nav-h);
 }
 
@@ -808,6 +808,24 @@ button {
 
 .link-card:hover {
   background: var(--bg-panel-hover);
+}
+
+.asset-details {
+  margin: 0.65rem 0 0.25rem;
+}
+
+.asset-details-meta {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.asset-details-description {
+  margin: 0.4rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
 }
 
 .specs-grid {

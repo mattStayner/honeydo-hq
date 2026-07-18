@@ -1,20 +1,19 @@
 import { useState } from 'react'
-import type { MaintenanceTask } from '../db/types'
+import type { Task } from '../db/types'
 import { formatCadence, suggestNextDue, toDateInputValue } from '../lib/cadence'
 
 export function ScheduleNextSheet({
   task,
   onConfirm,
+  onSkip,
   onCancel,
-  onFinish,
 }: {
-  task: MaintenanceTask
+  task: Task
   onConfirm: (nextDue: string, note: string) => void
+  /** Log completion and remove the task without scheduling again. */
+  onSkip: (note: string) => void
   onCancel: () => void
-  /** One-time tasks: log completion and remove without scheduling again. */
-  onFinish?: (note: string) => void
 }) {
-  const hasCadence = Boolean(task.cadence)
   const suggested = task.cadence
     ? toDateInputValue(suggestNextDue(new Date(), task.cadence))
     : ''
@@ -29,12 +28,12 @@ export function ScheduleNextSheet({
         aria-labelledby="schedule-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="schedule-title">{hasCadence ? 'Schedule next' : 'Mark done'}</h2>
+        <h2 id="schedule-title">Schedule next</h2>
         <p>
           Marked done: <strong>{task.title}</strong>.
-          {hasCadence
+          {task.cadence
             ? ` Suggested from cadence (${formatCadence(task.cadence)}).`
-            : ' One-time task — set another date only if you want to do it again.'}
+            : ' Set a next date, or finish without scheduling.'}
         </p>
         <div className="field">
           <label htmlFor="completion-note">Notes</label>
@@ -47,7 +46,7 @@ export function ScheduleNextSheet({
           />
         </div>
         <div className="field">
-          <label htmlFor="next-due">{hasCadence ? 'Next due' : 'Due again (optional)'}</label>
+          <label htmlFor="next-due">Next due</label>
           <input
             id="next-due"
             type="date"
@@ -56,25 +55,21 @@ export function ScheduleNextSheet({
           />
         </div>
         <div className="btn-row">
-          {hasCadence || nextDue ? (
-            <button
-              type="button"
-              className="btn btn-primary"
-              disabled={!nextDue}
-              onClick={() => onConfirm(nextDue, note.trim())}
-            >
-              Set next date
-            </button>
-          ) : null}
-          {!hasCadence && onFinish ? (
-            <button
-              type="button"
-              className={`btn ${nextDue ? 'btn-ghost' : 'btn-primary'}`}
-              onClick={() => onFinish(note.trim())}
-            >
-              Done for good
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={!nextDue}
+            onClick={() => onConfirm(nextDue, note.trim())}
+          >
+            Set next date
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => onSkip(note.trim())}
+          >
+            Done — no next date
+          </button>
           <button type="button" className="btn btn-ghost" onClick={onCancel}>
             Cancel
           </button>

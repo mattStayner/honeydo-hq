@@ -6,7 +6,6 @@ import { SettingsPage } from './pages/SettingsPage'
 import { ShopPage } from './pages/ShopPage'
 import { SpaceDetailPage } from './pages/SpaceDetailPage'
 import { SpacesPage } from './pages/SpacesPage'
-import { TasksPage } from './pages/TasksPage'
 
 export default function App() {
   return (
@@ -17,8 +16,8 @@ export default function App() {
           <Route path="spaces" element={<SpacesPage />} />
           <Route path="spaces/:spaceId" element={<SpaceDetailPage />} />
           <Route path="assets/:assetId" element={<AssetDetailPage />} />
-          <Route path="tasks" element={<TasksPage />} />
-          <Route path="saturday" element={<Navigate to="/tasks" replace />} />
+          <Route path="tasks" element={<Navigate to="/" replace />} />
+          <Route path="saturday" element={<Navigate to="/" replace />} />
           <Route path="shop" element={<ShopPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
