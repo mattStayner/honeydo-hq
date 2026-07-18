@@ -7,6 +7,7 @@ import { createId } from '../lib/ids'
 import { formatCadence, formatDisplayDate } from '../lib/cadence'
 import { EmptyState } from '../components/EmptyState'
 import { EditAssetDetailsSheet } from '../components/EditAssetDetailsSheet'
+import { KebabMenu } from '../components/KebabMenu'
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat(undefined, {
@@ -89,7 +90,6 @@ export function AssetDetailPage() {
   }
 
   async function deleteTask(taskId: string) {
-    if (!confirm('Delete this task?')) return
     await db.transaction('rw', db.tasks, db.completions, async () => {
       await db.completions.where('taskId').equals(taskId).delete()
       await db.tasks.delete(taskId)
@@ -98,7 +98,6 @@ export function AssetDetailPage() {
 
   async function deleteAsset() {
     if (!asset) return
-    if (!confirm(`Delete "${asset.name}" and its tasks?`)) return
     const assetTasks = await db.tasks.where('assetId').equals(assetId).toArray()
     const taskIds = assetTasks.map((t) => t.id)
     await db.transaction('rw', db.assets, db.tasks, db.completions, async () => {
@@ -143,6 +142,17 @@ export function AssetDetailPage() {
           <h1>{asset.name}</h1>
           <p>Purchase info, specs, and maintenance schedule.</p>
         </div>
+        <KebabMenu
+          aria-label="Asset actions"
+          items={[
+            {
+              label: 'Delete asset',
+              danger: true,
+              confirmMessage: `Are you sure you want to delete "${asset.name}" and its tasks? This can't be undone.`,
+              onSelect: () => void deleteAsset(),
+            },
+          ]}
+        />
       </header>
 
       <div className="page-header" style={{ marginTop: '0.25rem' }}>
@@ -353,26 +363,22 @@ export function AssetDetailPage() {
                   </div>
                   {task.materials ? <div className="card-meta">{task.materials}</div> : null}
                 </div>
-              </div>
-              <div className="btn-row">
-                <button
-                  type="button"
-                  className="btn btn-danger btn-sm"
-                  onClick={() => void deleteTask(task.id)}
-                >
-                  Delete
-                </button>
+                <KebabMenu
+                  aria-label={`Actions for ${task.title}`}
+                  items={[
+                    {
+                      label: 'Delete',
+                      danger: true,
+                      confirmMessage: `Are you sure you want to delete "${task.title}"? This can't be undone.`,
+                      onSelect: () => void deleteTask(task.id),
+                    },
+                  ]}
+                />
               </div>
             </article>
           ))}
         </div>
       )}
-
-      <div className="btn-row" style={{ marginTop: '1.5rem' }}>
-        <button type="button" className="btn btn-danger btn-sm" onClick={() => void deleteAsset()}>
-          Delete asset
-        </button>
-      </div>
     </main>
   )
 }

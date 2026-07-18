@@ -4,6 +4,7 @@ import { db } from '../db/database'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { createId } from '../lib/ids'
 import { EmptyState } from '../components/EmptyState'
+import { KebabMenu } from '../components/KebabMenu'
 
 export function SpaceDetailPage() {
   const { spaceId = '' } = useParams()
@@ -36,7 +37,6 @@ export function SpaceDetailPage() {
 
   async function deleteSpace() {
     if (!space) return
-    if (!confirm(`Delete "${space.name}" and all assets/tasks inside?`)) return
     const spaceAssets = await db.assets.where('spaceId').equals(spaceId).toArray()
     const assetIds = spaceAssets.map((a) => a.id)
     const tasks =
@@ -85,9 +85,22 @@ export function SpaceDetailPage() {
           <h1>{space.name}</h1>
           <p>{space.kind === 'room' ? 'Room' : 'Outdoor / other'}</p>
         </div>
-        <button type="button" className="btn btn-primary btn-sm" onClick={() => setShowForm((v) => !v)}>
-          {showForm ? 'Close' : 'Add asset'}
-        </button>
+        <div className="btn-row">
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => setShowForm((v) => !v)}>
+            {showForm ? 'Close' : 'Add asset'}
+          </button>
+          <KebabMenu
+            aria-label="Space actions"
+            items={[
+              {
+                label: 'Delete space',
+                danger: true,
+                confirmMessage: `Are you sure you want to delete "${space.name}" and all assets/tasks inside? This can't be undone.`,
+                onSelect: () => void deleteSpace(),
+              },
+            ]}
+          />
+        </div>
       </header>
 
       {showForm ? (
@@ -128,12 +141,6 @@ export function SpaceDetailPage() {
           ))}
         </div>
       )}
-
-      <div className="btn-row" style={{ marginTop: '1.5rem' }}>
-        <button type="button" className="btn btn-danger btn-sm" onClick={() => void deleteSpace()}>
-          Delete space
-        </button>
-      </div>
     </main>
   )
 }

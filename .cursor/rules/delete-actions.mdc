@@ -1,0 +1,36 @@
+---
+description: Hide Delete actions in kebab menus and require confirmation before destructive deletes.
+alwaysApply: true
+---
+
+# Delete actions UX
+
+All user-facing **Delete** actions must follow this pattern:
+
+1. **Never** show a standalone Delete / Delete *entity* button in primary UI (card footers, page footers, toolbar rows).
+2. Place Delete inside a **kebab (⋮) menu** using `src/components/KebabMenu.tsx` and existing `.kebab-*` styles.
+3. **Always** require confirmation before deleting. Danger kebab items must set `danger: true` and a required `confirmMessage` (enforced by `KebabMenu` typings).
+4. Use the **in-app** confirm sheet (`ConfirmSheet` via `KebabMenu`) — never `window.confirm` for deletes (native dialogs are unreliable in this PWA).
+5. Confirmation copy must follow: `Are you sure you want to delete [x]? This can't be undone.` — name the specific item (and cascade impact when relevant).
+
+```tsx
+// ❌ BAD — visible delete button / native confirm
+<button className="btn btn-danger" onClick={() => {
+  if (confirm('Delete?')) void deleteThing()
+}}>Delete</button>
+
+// ✅ GOOD — kebab + in-app confirm
+<KebabMenu
+  aria-label="Thing actions"
+  items={[
+    {
+      label: 'Delete',
+      danger: true,
+      confirmMessage: `Are you sure you want to delete "${thing.name}"? This can't be undone.`,
+      onSelect: () => void deleteThing(),
+    },
+  ]}
+/>
+```
+
+Applies to new screens and when editing existing delete UI.
