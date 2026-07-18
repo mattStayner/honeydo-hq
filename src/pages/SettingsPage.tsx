@@ -1,6 +1,7 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import { downloadBackup, exportBackup, importBackup, parseBackupFile } from '../db/backup'
 import { seedDemoData } from '../db/seed'
+import { reloadToLatestVersion } from '../lib/appUpdate'
 import {
   DEFAULT_WEEKLY_GOAL,
   getWeeklyGoal,
@@ -89,12 +90,25 @@ export function SettingsPage() {
     }
   }
 
+  async function checkForUpdate() {
+    setError(null)
+    setBusy(true)
+    setMessage('Checking for updates…')
+    try {
+      await reloadToLatestVersion()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Update check failed.')
+      setBusy(false)
+      setMessage(null)
+    }
+  }
+
   return (
     <main className="page">
       <header className="page-header">
         <div>
           <h1>Settings</h1>
-          <p>Honey bank goal, backup, and install tips.</p>
+          <p>Honey bank goal, backup, updates, and install tips.</p>
         </div>
       </header>
 
@@ -162,6 +176,21 @@ export function SettingsPage() {
           className="sr-only"
           onChange={(e) => void onFileChange(e)}
         />
+      </section>
+
+      <section className="card stack-gap" style={{ marginTop: '0.85rem' }}>
+        <h2>App updates</h2>
+        <p className="muted">
+          Check for a newer build and reload. Your local data stays on this device.
+        </p>
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={busy}
+          onClick={() => void checkForUpdate()}
+        >
+          Reload for latest version
+        </button>
       </section>
 
       <section className="card stack-gap" style={{ marginTop: '0.85rem' }}>
